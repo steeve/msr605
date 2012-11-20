@@ -1,6 +1,5 @@
 import time
 import serial
-import struct
 
 class MSRException(Exception):
     pass
@@ -110,7 +109,7 @@ class MSR605(serial.Serial):
         tracks = [''] * 3
         for tn in self.enabled_tracks:
             self._expect(self.ESC_CHR + chr(tn))
-            str_len = struct.unpack('B', self.read(1))[0]
+            str_len = ord(self.read(1))
             tracks[tn - 1] = self.read(str_len)
         self._expect('\x3F' + self.FS_CHR)
         self._read_status()
@@ -136,14 +135,17 @@ class MSR605(serial.Serial):
         self._send_command('\x78')
         self._expect(self.ESC_CHR + '\x30')
 
-    def set_leading_zero(self, t13, t2):
-        self._send_command('\x7A', chr(t13), chr(t2))
+    def set_leading_zero(self, t1, t2, t3):
+        assert t1 == t3
+        self._send_command('\x7A', chr(t1), chr(t2))
         self._read_status()
 
     def check_leading_zero(self):
         self._send_command('\x6C')
         self._expect(self.ESC_CHR)
-        return ord(self.read(1)), ord(self.read(1))
+        t13 = ord(self.read(1))
+        t2 = ord(self.read(1))
+        return t13, t2, t13
 
     def erase_card(self, t1=True, t2=True, t3=True):
         flags = (t1 and 1 or 0) | ((t2 and 1 or 0) << 1) | ((t3 and 1 or 0) << 2)
@@ -161,12 +163,12 @@ class MSR605(serial.Serial):
     def write_raw(self, *tracks):
         raw_data_block = self.ESC_CHR + '\x73'
         for tn, track in enumerate(tracks):
-            raw_data_block += \
-                self.ESC_CHR +\
-                chr(tn + 1) +\
-                chr(len(track)) +\
-                track
-        raw_data_block += '\x3F\x1C'
-        print repr(raw_data_block)
+            if track:
+                raw_data_block += \
+                    self.ESC_CHR +\
+                    chr(tn + 1) +\
+                    chr(len(track)) +\
+                    track
+        raw_data_block += '\x3F' + self.FS_CHR
         self._send_command('\x6E', raw_data_block)
         self._read_status()
