@@ -101,8 +101,7 @@ class MSR605(serial.Serial):
         self._send_command('\x61')
 
     def read_iso(self):
-        self.set_bpc(7, 5, 5)
-        self.select_bpi(True, False, True)
+        self._set_iso_mode()
         self._send_command('\x72')
         self._expect(self.ESC_CHR + '\x73')
         self._expect(self.ESC_CHR + '\x01')
@@ -189,7 +188,12 @@ class MSR605(serial.Serial):
         self._send_command('\x6E', raw_data_block)
         self._read_status()
 
+    def _set_iso_mode(self):
+        self.select_bpi(True, False, True)
+        self.set_bpc(7, 5, 5)
+
     def write_iso(self, *tracks):
+        self._set_iso_mode()
         tracks = (re.sub(r'^%|^;|\?$', '', track) for track in tracks)
         data_block = self.ESC_CHR + '\x73'
         data_block += ''.join(
@@ -201,6 +205,7 @@ class MSR605(serial.Serial):
         self._read_status()
 
     def read_iso_soft(self):
+        self._set_iso_mode()
         track1, track2, track3 = self.read_raw()
         return (
             track1.decode('iso7811-2-track1'),
@@ -209,6 +214,7 @@ class MSR605(serial.Serial):
         )
 
     def write_iso_soft(self, *tracks):
+        self._set_iso_mode()
         tracks = [re.sub(r'^%|^;|\?$', '', track) for track in tracks]
         tracks[0] = ('%' + tracks[0] + '?').encode('iso7811-2-track1')
         tracks[1] = (';' + tracks[1] + '?').encode('iso7811-2-track2')
