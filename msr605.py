@@ -28,16 +28,14 @@ class MSR605(serial.Serial):
     ESC_CHR = '\x1B'
     FS_CHR = '\x1C'
 
-    def __init__(self, dev):
+    def __init__(self, dev, test=True):
         super(MSR605, self).__init__(dev, 9600, 8, serial.PARITY_NONE, timeout=10)
         self.reset()
-        if not self.communication_test():
-            raise MSRException('Communication test failed.')
-        if not self.ram_test():
-            raise MSRException('RAM test failed.')
-        if not self.sensor_test():
-            raise MSRException('Sensor test failed.')
-        self.reset()
+        if test:
+            self.communication_test()
+            self.ram_test()
+            self.sensor_test()
+            self.reset()
 
     def _read_status(self):
         exceptions = {
