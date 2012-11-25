@@ -57,7 +57,7 @@ class MSR605(serial.Serial):
             raise ReadError('Expected %s, got %s.' % (repr(data), repr(read_data)))
 
     def _read_until(self, end):
-        data = ""
+        data = ''
         while True:
             data += self.read(1)
             if data.endswith(end):
