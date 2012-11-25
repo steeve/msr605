@@ -28,6 +28,8 @@ class MSR605(serial.Serial):
     ESC_CHR = '\x1B'
     FS_CHR = '\x1C'
 
+    TRACK_SENTINELS = (('%', '?'), (';', '?'), (';', '?'))
+
     def __init__(self, dev, test=True):
         super(MSR605, self).__init__(dev, 9600, 8, serial.PARITY_NONE, timeout=10)
         self.reset()
@@ -101,25 +103,15 @@ class MSR605(serial.Serial):
     def reset(self):
         self._send_command('\x61')
 
-    def read_iso(self):
-        self._set_iso_mode()
-        self._send_command('\x72')
-        self._expect(self.ESC_CHR + '\x73')
-        self._expect(self.ESC_CHR + '\x01')
-        track1 = self._read_until(self.ESC_CHR + '\x02')[:-2]
-        track2 = self._read_until(self.ESC_CHR + '\x03')[:-2]
-        track3 = self._read_until(self.FS_CHR)[:-1]
-        self._read_status()
-        return track1, track2, track3
-
     def read_raw(self):
+        def read_tracks():
+            for tn in xrange(1, 4):
+                self._expect(self.ESC_CHR + chr(tn))
+                str_len = ord(self.read(1))
+                yield self.read(str_len)
         self._send_command('\x6D')
         self._expect(self.ESC_CHR + '\x73')
-        tracks = [''] * 3
-        for tn in xrange(1, 4):
-            self._expect(self.ESC_CHR + chr(tn))
-            str_len = ord(self.read(1))
-            tracks[tn - 1] = self.read(str_len)
+        tracks = tuple(get_tracks())
         self._expect('\x3F' + self.FS_CHR)
         self._read_status()
         return tracks
@@ -178,6 +170,7 @@ class MSR605(serial.Serial):
         self._expect(self.ESC_CHR + '\x30' + chr(t1) + chr(t2) + chr(t3))
 
     def write_raw(self, *tracks):
+        assert len(tracks) == 3
         raw_data_block = self.ESC_CHR + '\x73'
         for tn, track in enumerate(tracks):
             raw_data_block += \
@@ -192,10 +185,22 @@ class MSR605(serial.Serial):
     def _set_iso_mode(self):
         self.select_bpi(True, False, True)
         self.set_bpc(7, 5, 5)
+        self.set_leading_zero(61, 22)
 
-    def write_iso(self, *tracks):
-        self._set_iso_mode()
-        tracks = (re.sub(r'^%|^;|\?$', '', track) for track in tracks)
+    def write_iso(self, *tracks, soft=False):
+        assert len(tracks) == 3
+        if soft:
+            return self._write_iso_soft(*tracks)
+        return self._write_iso_native(*tracks)
+
+    def _clean_iso_track_data(tracks):
+        return [
+            re.sub(r'^%s|%s$' % map(re.escape, sentinels), '', track)
+            for sentinels, track in zip(self.TRACK_SENTINELS, tracks)):
+        ]
+
+    def _write_iso_native(self, *tracks):
+        tracks = self._clean_iso_track_data(tracks)
         data_block = self.ESC_CHR + '\x73'
         data_block += ''.join(
             self.ESC_CHR + chr(tn + 1) + track
@@ -205,22 +210,36 @@ class MSR605(serial.Serial):
         self._send_command('\x77', raw_data_block)
         self._read_status()
 
-    def read_iso_soft(self):
+    def _write_iso_soft(self, *tracks):
         self._set_iso_mode()
-        track1, track2, track3 = self.read_raw()
-        return (
-            track1.decode('iso7811-2-track1'),
-            track2.decode('iso7811-2-track2'),
-            track3.decode('iso7811-2-track3'),
-        )
-
-    def write_iso_soft(self, *tracks):
-        self._set_iso_mode()
-        tracks = [re.sub(r'^%|^;|\?$', '', track) for track in tracks]
-        tracks[0] = ('%' + tracks[0] + '?').encode('iso7811-2-track1')
-        tracks[1] = (';' + tracks[1] + '?').encode('iso7811-2-track2')
-        tracks[2] = (';' + tracks[2] + '?').encode('iso7811-2-track3')
+        tracks = self._clean_iso_track_data(tracks)
+        tracks = [
+            (ss + track + es).encode('iso7811-2-track%d' % (tn + 1))
+            for tn, ((ss, es), track) in enumerate(zip(self.TRACK_SENTINELS, tracks))
+        ]
         return self.write_raw(*tracks)
+
+    def read_iso(self, soft=False):
+        if soft:
+            return self._read_iso_soft()
+        return self._read_iso_native()
+
+    def _read_iso_native(self):
+        self._send_command('\x72')
+        self._expect(self.ESC_CHR + '\x73')
+        self._expect(self.ESC_CHR + '\x01')
+        track1 = self._read_until(self.ESC_CHR + '\x02')[:-2]
+        track2 = self._read_until(self.ESC_CHR + '\x03')[:-2]
+        track3 = self._read_until(self.FS_CHR)[:-1]
+        self._read_status()
+        return track1, track2, track3
+
+    def _read_iso_soft(self):
+        self._set_iso_mode()
+        return [
+            track.decode('iso7811-2-track%d' % (tn + 1))
+            for tn, track in enumerate(self.read_raw())
+        ]
 
 
 class ISO7811_2(codecs.Codec):
