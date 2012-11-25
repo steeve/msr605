@@ -160,7 +160,7 @@ class MSR605(serial.Serial):
         return t13, t2
 
     def erase_card(self, t1=True, t2=True, t3=True):
-        flags = (t1 and 1 or 0) | ((t2 and 1 or 0) << 1) | ((t3 and 1 or 0) << 2)
+        flags = (t1 and 1 or 0) | (t2 and 2 or 0) | (t3 and 4 or 0)
         self._send_command('\x63', chr(flags))
         self._read_status()
 
