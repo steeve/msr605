@@ -28,9 +28,6 @@ class MSR605(serial.Serial):
     ESC_CHR = '\x1B'
     FS_CHR = '\x1C'
 
-
-    enabled_tracks = [1, 2, 3]
-
     def __init__(self, dev):
         super(MSR605, self).__init__(dev, 9600, 8, serial.PARITY_NONE, timeout=10)
         self.reset()
@@ -119,7 +116,7 @@ class MSR605(serial.Serial):
         self._send_command('\x6D')
         self._expect(self.ESC_CHR + '\x73')
         tracks = [''] * 3
-        for tn in self.enabled_tracks:
+        for tn in xrange(1, 4):
             self._expect(self.ESC_CHR + chr(tn))
             str_len = ord(self.read(1))
             tracks[tn - 1] = self.read(str_len)
