@@ -85,15 +85,18 @@ class MSR605(serial.Serial):
 
     def sensor_test(self):
         self._send_command('\x86')
-        return self.read(2) == (self.ESC_CHR + '\x30')
+        if self.read(2) != (self.ESC_CHR + '\x30'):
+            raise MSRException('Sensor test failed.')
 
     def communication_test(self):
         self._send_command('\x65')
-        return self.read(2) == (self.ESC_CHR + '\x79')
+        if self.read(2) != (self.ESC_CHR + '\x79'):
+            raise MSRException('Communication test failed.')
 
     def ram_test(self):
         self._send_command('\x87')
-        return self.read(2) == (self.ESC_CHR + '\x30')
+        if self.read(2) != (self.ESC_CHR + '\x30'):
+            raise MSRException('RAM test failed.')
 
     def reset(self):
         self._send_command('\x61')
