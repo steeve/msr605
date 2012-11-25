@@ -32,7 +32,7 @@ class MSR605(serial.Serial):
     enabled_tracks = [1, 2, 3]
 
     def __init__(self, dev):
-        super(LLMSR605, self).__init__(dev, 9600, 8, serial.PARITY_NONE, timeout=10)
+        super(MSR605, self).__init__(dev, 9600, 8, serial.PARITY_NONE, timeout=10)
         self.reset()
         if not self.communication_test():
             raise MSRException('Communication test failed.')
