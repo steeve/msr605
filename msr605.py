@@ -207,15 +207,15 @@ class MSR605(serial.Serial):
         track1, track2, track3 = self.read_raw()
         return (
             track1.decode('iso7811-2-track1'),
-            track2.decode('iso7811-2-track23'),
-            track3.decode('iso7811-2-track23'),
+            track2.decode('iso7811-2-track2'),
+            track3.decode('iso7811-2-track3'),
         )
 
     def write_iso_soft(self, *tracks):
         tracks = [re.sub(r'^%|^;|\?$', '', track) for track in tracks]
         tracks[0] = ('%' + tracks[0] + '?').encode('iso7811-2-track1')
-        tracks[1] = (';' + tracks[1] + '?').encode('iso7811-2-track23')
-        tracks[2] = (';' + tracks[2] + '?').encode('iso7811-2-track23')
+        tracks[1] = (';' + tracks[1] + '?').encode('iso7811-2-track2')
+        tracks[2] = (';' + tracks[2] + '?').encode('iso7811-2-track3')
         return self.write_raw(*tracks)
 
 
@@ -276,7 +276,7 @@ class ISO7811_2(codecs.Codec):
     def codec_search(cls, name):
         return {
             'iso7811-2-track1': (cls.encode_track1, cls.decode_track1, None, None),
-            'iso7811-2-track23': (cls.encode_track23, cls.decode_track23, None, None),
+            'iso7811-2-track2': (cls.encode_track23, cls.decode_track23, None, None),
+            'iso7811-2-track3': (cls.encode_track23, cls.decode_track23, None, None),
         }.get(name, None)
 codecs.register(ISO7811_2.codec_search)
-
