@@ -187,7 +187,7 @@ class MSR605(serial.Serial):
         self.set_bpc(7, 5, 5)
         self.set_leading_zero(61, 22)
 
-    def write_iso(self, *tracks, soft=False):
+    def write_iso(self, soft=False, *tracks):
         assert len(tracks) == 3
         if soft:
             return self._write_iso_soft(*tracks)
@@ -196,7 +196,7 @@ class MSR605(serial.Serial):
     def _clean_iso_track_data(tracks):
         return [
             re.sub(r'^%s|%s$' % map(re.escape, sentinels), '', track)
-            for sentinels, track in zip(self.TRACK_SENTINELS, tracks)):
+            for sentinels, track in zip(self.TRACK_SENTINELS, tracks)
         ]
 
     def _write_iso_native(self, *tracks):
