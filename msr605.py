@@ -111,7 +111,7 @@ class MSR605(serial.Serial):
                 yield self.read(str_len)
         self._send_command('\x6D')
         self._expect(self.ESC_CHR + '\x73')
-        tracks = tuple(get_tracks())
+        tracks = tuple(read_tracks())
         self._expect('\x3F' + self.FS_CHR)
         self._read_status()
         return tracks
