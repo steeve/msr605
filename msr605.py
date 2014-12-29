@@ -69,6 +69,7 @@ class MSR605(serial.Serial):
         self.flushInput()
         self.flushOutput()
         self.write(self.ESC_CHR + command + ''.join(args))
+        self.flush()
 
     def all_leds_off(self):
         self._send_command('\x81')
