@@ -30,8 +30,8 @@ class MSR605(serial.Serial):
 
     TRACK_SENTINELS = (('%', '?'), (';', '?'), (';', '?'))
 
-    def __init__(self, dev, test=True):
-        super(MSR605, self).__init__(dev, 9600, 8, serial.PARITY_NONE, timeout=10)
+    def __init__(self, dev, test=True, timeout=10):
+        super(MSR605, self).__init__(dev, 9600, 8, serial.PARITY_NONE, timeout=timeout)
         self.reset()
         if test:
             self.communication_test()
