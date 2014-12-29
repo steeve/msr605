@@ -170,6 +170,13 @@ class MSR605(serial.Serial):
         self._send_command('\x6F', chr(t1), chr(t2), chr(t3))
         self._expect(self.ESC_CHR + '\x30' + chr(t1) + chr(t2) + chr(t3))
 
+    def _reverse_bits(self, s):
+        nv = ''
+        value = bytearray(s)
+        for b in value:
+            nv += chr(int('{:08b}'.format(b)[::-1], 2))
+        return nv
+
     def write_raw(self, *tracks):
         assert len(tracks) == 3
         raw_data_block = self.ESC_CHR + '\x73'
@@ -178,7 +185,7 @@ class MSR605(serial.Serial):
                 self.ESC_CHR +\
                 chr(tn + 1) +\
                 chr(len(track)) +\
-                track
+                self._reverse_bits(track)
         raw_data_block += '\x3F' + self.FS_CHR
         self._send_command('\x6E', raw_data_block)
         self._read_status()
